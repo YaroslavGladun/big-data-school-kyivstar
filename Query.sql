@@ -15,18 +15,18 @@ WITH
     CREDENTIAL = YaroslavHladunStorageCredential02,
     TYPE = HADOOP
   ) ;
+GO
+CREATE EXTERNAL FILE FORMAT CSV05
+WITH (FORMAT_TYPE = DELIMITEDTEXT,
+      FORMAT_OPTIONS(
+          FIELD_TERMINATOR = ',',
+          STRING_DELIMITER = '"',
+          FIRST_ROW = 2, 
+          USE_TYPE_DEFAULT = True)
+); 
+GO
 
-CREATE EXTERNAL FILE FORMAT csv03  
-WITH (  
-    FORMAT_TYPE = DELIMITEDTEXT,  
-    FORMAT_OPTIONS (  
-        FIELD_TERMINATOR = N',',
-		USE_TYPE_DEFAULT = False),  
-    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.GzipCodec'
-);  
-
-
-CREATE EXTERNAL TABLE [parkour_schema].[yellow_trip_external_03]
+CREATE EXTERNAL TABLE [parkour_schema].[yellow_trip_external_04]
 (
 	[VendorID] [int] NULL,
 	[tpep_pickup_datetime] [datetime] NULL,
@@ -50,14 +50,57 @@ CREATE EXTERNAL TABLE [parkour_schema].[yellow_trip_external_03]
 WITH (
     DATA_SOURCE = [YellowTripdata02],
     LOCATION = N'yellow_tripdata_2020-01.csv',
-    FILE_FORMAT = [csv03],
+    FILE_FORMAT = [CSV05],
     REJECT_TYPE = VALUE,
-    REJECT_VALUE = 0)
+    REJECT_VALUE = 0) ;
+GO
+
+CREATE TABLE [parkour_schema].[fact_tripdata]
+WITH
+(
+	DISTRIBUTION = HASH ( [tpep_pickup_datetime] ),
+	CLUSTERED COLUMNSTORE INDEX
+)
+AS SELECT * FROM [parkour_schema].[yellow_trip_external_04]
+GO
+
+CREATE TABLE [parkour_schema].Vendor
+(
+	id int NULL,
+	name varchar(255) NULL
+)
+WITH
+(
+	DISTRIBUTION = REPLICATE,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+CREATE TABLE [parkour_schema].RateCode
+(
+	ID int NOT NULL,
+	Name varchar(50) NULL
+)
+WITH
+(
+	DISTRIBUTION = REPLICATE,
+	CLUSTERED COLUMNSTORE INDEX
+)
+GO
+
+CREATE TABLE [parkour_schema].Payment_type
+(
+	ID int NOT NULL,
+	Name varchar(50) NULL
+)
+WITH
+(
+	DISTRIBUTION = REPLICATE,
+	CLUSTERED COLUMNSTORE INDEX
+)
 GO
 
 
--- Drop a table called 'TableName' in schema 'dbo'
--- Drop the table if it already exists
-IF OBJECT_ID('[parkour_schema].[yellow_trip_external_03]', 'U') IS NOT NULL
-DROP TABLE [parkour_schema].[yellow_trip_external_03]
-GO
+-- DROP TABLE [parkour_schema].Vendor;
+
+SELECT TOP(5) * FROM [parkour_schema].Vendor;
